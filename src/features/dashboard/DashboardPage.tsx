@@ -29,8 +29,7 @@ import { AXIS_PROPS, CHART_COLORS, ChartTooltip, compactMoneyTick } from '../../
 import { controlClass } from '../../components/ui/Form'
 import { canSeeActivity } from '../auth/permissions'
 import { greeting } from './greeting'
-import { DepartmentDashboard } from './DepartmentDashboard'
-import { PersonalDashboard } from './PersonalDashboard'
+import { AdminDashboard, CeoDashboard, HRDashboard, ManagerDashboard, SalesDashboard, StaffDashboard } from './RoleDashboards'
 
 
 function previousRange(start: string, end: string) {
@@ -108,7 +107,7 @@ export function ExecutiveDashboard() {
   return (
     <>
       <PageHeader
-        title="Executive dashboard"
+        title="Finance dashboard"
         description={`${greeting()}, ${user.name.split(' ')[0]}. Here is how ${state.organization.shortName} is performing — ${formatDate(range.start)} to ${formatDate(range.end)}.`}
         actions={
           <>
@@ -122,8 +121,8 @@ export function ExecutiveDashboard() {
                 </option>
               ))}
             </select>
-            <ButtonLink to="/procurement/requests/new" icon={<Plus className="size-4" />}>
-              New request
+            <ButtonLink to="/finance?tab=purchasing" icon={<Plus className="size-4" />}>
+              Purchasing
             </ButtonLink>
           </>
         }
@@ -148,7 +147,7 @@ export function ExecutiveDashboard() {
           invertTrend
           hint="vs previous period"
           tone="purple"
-          to="/finance?tab=expenses"
+          to="/finance?tab=payables"
         />
         <StatCard
           label="Pending approvals (company)"
@@ -222,7 +221,7 @@ export function ExecutiveDashboard() {
 
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2">
-          <CardHeader title="Recent transactions" description="Payments received and expenses paid" actions={<Link to="/finance?tab=transactions" className="text-sm font-medium text-brand-700 hover:text-brand-800">View all</Link>} />
+          <CardHeader title="Recent transactions" description="Payments received and expenses paid" actions={<Link to="/finance?tab=ledger" className="text-sm font-medium text-brand-700 hover:text-brand-800">View all</Link>} />
           {transactions.length === 0 ? (
             <EmptyState title="No transactions yet" />
           ) : (
@@ -230,7 +229,7 @@ export function ExecutiveDashboard() {
               {transactions.map((t) => (
                 <li key={t.id}>
                   <button
-                    onClick={() => navigate(t.sourceType === 'Invoice' ? `/finance/invoices/${t.sourceId}` : `/finance?tab=expenses&q=${encodeURIComponent(t.reference)}`)}
+                    onClick={() => navigate(t.sourceType === 'Invoice' ? `/finance/invoices/${t.sourceId}` : `/finance?tab=payables&q=${encodeURIComponent(t.reference)}`)}
                     className="flex w-full items-center gap-3 px-5 py-3 text-left hover:bg-slate-50"
                   >
                     <span className={t.direction === 'In' ? 'flex size-9 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600' : 'flex size-9 shrink-0 items-center justify-center rounded-full bg-violet-50 text-violet-600'}>
@@ -367,7 +366,20 @@ export function ExecutiveDashboard() {
 /** Each person lands on the dashboard that matches their access. */
 export default function DashboardPage() {
   const { perms } = useData()
-  if (perms.dashboard === 'executive') return <ExecutiveDashboard />
-  if (perms.dashboard === 'department') return <DepartmentDashboard />
-  return <PersonalDashboard />
+  switch (perms.dashboard) {
+    case 'ceo':
+      return <CeoDashboard />
+    case 'admin':
+      return <AdminDashboard />
+    case 'finance':
+      return <ExecutiveDashboard />
+    case 'sales':
+      return <SalesDashboard />
+    case 'hr':
+      return <HRDashboard />
+    case 'manager':
+      return <ManagerDashboard />
+    default:
+      return <StaffDashboard />
+  }
 }

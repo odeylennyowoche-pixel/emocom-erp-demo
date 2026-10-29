@@ -43,6 +43,16 @@ const InvoiceDetailPage = lazyPage(() => import('../features/finance/InvoiceDeta
 const ReportsPage = lazyPage(() => import('../features/reports/ReportsPage'))
 const SettingsPage = lazyPage(() => import('../features/settings/SettingsPage'))
 const SearchPage = lazyPage(() => import('../features/search/SearchPage'))
+const ApprovalsPage = lazyPage(() => import('../features/approvals/ApprovalsPage'))
+const WorkspacePage = lazyPage(() => import('../features/workspace/WorkspacePage'))
+const SalesPage = lazyPage(() => import('../features/sales/SalesPage'))
+const ProposalsPage = lazyPage(() => import('../features/proposals/ProposalsPage'))
+const ProposalDetailPage = lazyPage(() => import('../features/proposals/ProposalDetailPage'))
+const ProjectsPage = lazyPage(() => import('../features/projects/ProjectsPage'))
+const ProjectDetailPage = lazyPage(() => import('../features/projects/ProjectDetailPage'))
+const TeamPage = lazyPage(() => import('../features/team/TeamPage'))
+const HRPage = lazyPage(() => import('../features/hr/HRPage'))
+const AdminPage = lazyPage(() => import('../features/admin/AdminPage'))
 
 // Hash-based URLs (/#/employees) so the demo works on any static host, e.g. GitHub Pages.
 export const router = createHashRouter([
@@ -53,6 +63,16 @@ export const router = createHashRouter([
     errorElement: <RouteError />,
     children: [
       { index: true, element: <DashboardPage /> },
+      { path: 'approvals', element: <ModuleGuard module="approvals"><ApprovalsPage /></ModuleGuard> },
+      { path: 'workspace', element: <ModuleGuard module="workspace"><WorkspacePage /></ModuleGuard> },
+      { path: 'sales', element: <ModuleGuard module="sales"><SalesPage /></ModuleGuard> },
+      { path: 'proposals', element: <ModuleGuard module="proposals"><ProposalsPage /></ModuleGuard> },
+      { path: 'proposals/:id', element: <ModuleGuard module="proposals"><ProposalDetailPage /></ModuleGuard> },
+      { path: 'projects', element: <ModuleGuard module="projects"><ProjectsPage /></ModuleGuard> },
+      { path: 'projects/:id', element: <ModuleGuard module="projects"><ProjectDetailPage /></ModuleGuard> },
+      { path: 'team', element: <ModuleGuard module="team"><TeamPage /></ModuleGuard> },
+      { path: 'hr', element: <ModuleGuard module="hr"><HRPage /></ModuleGuard> },
+      { path: 'admin', element: <ModuleGuard module="admin"><AdminPage /></ModuleGuard> },
       { path: 'employees', element: <ModuleGuard module="employees"><EmployeesPage /></ModuleGuard> },
       { path: 'employees/new', element: <ModuleGuard module="employees"><EmployeeFormPage /></ModuleGuard> },
       { path: 'employees/:id', element: <ModuleGuard module="employees"><EmployeeDetailPage /></ModuleGuard> },

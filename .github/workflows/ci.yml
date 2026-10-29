@@ -1,0 +1,41 @@
+# Checks feature branches before they are merged: strict build, smoke test of
+# every demo login, and review screenshots on the "screenshots-preview" branch.
+name: Branch checks
+on:
+  push:
+    branches-ignore: [main, screenshots, screenshots-preview]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Start preview server
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+          (npx vite preview --port 4180 --strictPort &)
+          for i in $(seq 1 30); do curl -sf http://localhost:4180/ >/dev/null && break; sleep 1; done
+      - name: Smoke test every demo login
+        run: node e2e/smoke.mjs
+      - name: Review screenshots
+        if: always()
+        run: OUT=/tmp/shots node e2e/screens.mjs || true
+      - name: Publish screenshots
+        if: always()
+        run: |
+          [ -d /tmp/shots ] || exit 0
+          cd /tmp/shots
+          git init -q -b screenshots-preview
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A && git commit -qm "Preview screenshots for ${GITHUB_SHA::7}"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" screenshots-preview

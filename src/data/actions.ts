@@ -39,16 +39,16 @@ export function currentUser(state: DemoState): AppUser {
   return state.users.find((u) => u.id === state.currentUserId) ?? state.users[0]
 }
 
-function now(): string {
+export function now(): string {
   return new Date().toISOString()
 }
 
-function withActivity(state: DemoState, action: string, entityType: EntityType, entityId?: string, link?: string, departmentId?: string): DemoState {
+export function withActivity(state: DemoState, action: string, entityType: EntityType, entityId?: string, link?: string, departmentId?: string): DemoState {
   const entry: ActivityEntry = { id: uid('act'), at: now(), actor: currentUser(state).name, action, entityType, entityId, link, departmentId: departmentId ?? currentUser(state).departmentId }
   return { ...state, activity: [entry, ...state.activity].slice(0, 200) }
 }
 
-function withNotification(state: DemoState, n: Omit<AppNotification, 'id' | 'at' | 'readBy'>): DemoState {
+export function withNotification(state: DemoState, n: Omit<AppNotification, 'id' | 'at' | 'readBy'>): DemoState {
   const entry: AppNotification = { ...n, id: uid('ntf'), at: now(), readBy: [currentUser(state).id] }
   return { ...state, notifications: [entry, ...state.notifications].slice(0, 50) }
 }
@@ -294,7 +294,7 @@ export function transitionPurchaseRequest(state: DemoState, id: string, action: 
   const tone = action === 'approve' ? 'success' : action === 'reject' ? 'danger' : 'info'
   // The requester's department always hears about it; Procurement is told once goods can be ordered or arrive.
   const requesterUser = next.users.find((u) => u.employeeId === pr.requesterId)
-  const prl = next.departments.find((d) => d.code === 'PRL')
+  const prl = next.departments.find((d) => d.code === 'FIN')
   const audience: NotificationAudience = {
     departmentIds: [pr.departmentId, ...(prl && (action === 'approve' || action === 'receive') ? [prl.id] : [])],
     userIds: requesterUser ? [requesterUser.id] : [],
@@ -315,7 +315,7 @@ export type ExpenseInput = Omit<Expense, 'id' | 'code'>
 
 export function addExpense(state: DemoState, input: ExpenseInput): { state: DemoState; record: Expense } {
   const record: Expense = { ...input, id: uid('exp'), code: nextCode(state.expenses.map((e) => e.code), 'EXP-', 5) }
-  const next = withActivity({ ...state, expenses: [record, ...state.expenses] }, `recorded expense ${record.code}`, 'expense', record.id, '/finance?tab=expenses', record.departmentId)
+  const next = withActivity({ ...state, expenses: [record, ...state.expenses] }, `recorded expense ${record.code}`, 'expense', record.id, '/finance?tab=payables', record.departmentId)
   return { state: next, record }
 }
 
@@ -324,7 +324,7 @@ export function setExpenseStatus(state: DemoState, id: string, status: PaymentSt
   if (!exp) throw new DomainError('Expense not found.')
   if (exp.status === status) throw new DomainError(`Expense is already ${status}.`)
   const next = { ...state, expenses: state.expenses.map((e) => (e.id === id ? { ...e, status } : e)) }
-  return withActivity(next, `marked expense ${exp.code} as ${status.toLowerCase()}`, 'expense', id, '/finance?tab=expenses', exp.departmentId)
+  return withActivity(next, `marked expense ${exp.code} as ${status.toLowerCase()}`, 'expense', id, '/finance?tab=payables', exp.departmentId)
 }
 
 export function setInvoiceStatus(state: DemoState, id: string, status: Invoice['status']): DemoState {
@@ -400,5 +400,5 @@ export function markAllNotificationsRead(state: DemoState, ids: string[]): DemoS
 }
 
 function procurementAudience(state: DemoState): NotificationAudience {
-  return { departmentIds: state.departments.filter((d) => d.code === 'PRL' || d.code === 'ENG').map((d) => d.id) }
+  return { departmentIds: state.departments.filter((d) => d.code === 'FIN' || d.code === 'ENG').map((d) => d.id) }
 }

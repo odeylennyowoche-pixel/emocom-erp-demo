@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Check, CheckCircle2, Circle, Info, PackageCheck, Pencil, Printer, RotateCcw, Send, X } from 'lucide-react'
 import { useData } from '../../data/store'
+import { ACCESS_LEVEL_LABELS } from '../../types'
 import { transitionPurchaseRequest } from '../../data/actions'
 import { departmentName, employeeById, fullName, prTotal } from '../../data/selectors'
 import { useAction } from '../../hooks/useAction'
@@ -95,7 +96,7 @@ export default function RequestDetailPage() {
         <div className="no-print mb-6 flex items-start gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
           <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
           <div>
-            <p className="font-medium">Signed in as {user.name} ({user.level}, {perms.department?.name}).</p>
+            <p className="font-medium">Signed in as {user.name} ({ACCESS_LEVEL_LABELS[user.level]}, {perms.department?.name}).</p>
             <ul className="mt-0.5 list-disc pl-4 text-sky-800">
               {actions
                 .filter((a) => !a.decision.allowed)
@@ -243,7 +244,7 @@ export default function RequestDetailPage() {
                         {
                           label: 'Finance',
                           value: (
-                            <Link to={`/finance?tab=expenses&q=${linkedExpense.code}`} className="text-brand-700 hover:underline">
+                            <Link to={`/finance?tab=payables&q=${linkedExpense.code}`} className="text-brand-700 hover:underline">
                               {linkedExpense.code} · {linkedExpense.status}
                             </Link>
                           ),

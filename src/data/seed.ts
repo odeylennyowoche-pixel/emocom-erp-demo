@@ -28,6 +28,7 @@ import type {
   Supplier,
 } from '../types'
 import { WAREHOUSE_LOCATIONS } from '../types'
+import { createWorkSeed } from './seedWork'
 import {
   ASSET_MODEL_SEEDS,
   CUSTOMER_SEEDS,
@@ -109,9 +110,9 @@ export function createSeedState(today = todayISO()): DemoState {
         lastName = LAST_NAMES[(empSeq * 11 + i * 5 + dSeed.code.length + shift * 3) % LAST_NAMES.length]
       }
       usedNames.add(`${firstName} ${lastName}`)
-      let email = `${firstName}.${lastName}`.toLowerCase() + '@enterpriseone.example'
+      let email = `${firstName}.${lastName}`.toLowerCase() + '@emocom.example'
       let n = 2
-      while (usedEmails.has(email)) email = `${firstName}.${lastName}${n++}`.toLowerCase() + '@enterpriseone.example'
+      while (usedEmails.has(email)) email = `${firstName}.${lastName}${n++}`.toLowerCase() + '@emocom.example'
       usedEmails.add(email)
       const isHead = i === 0
       // joining dates spread over ~8 years; a few in the last 6 months
@@ -149,8 +150,9 @@ export function createSeedState(today = todayISO()): DemoState {
   const users: AppUser[] = USER_SEEDS.map((u, i) => {
     const dept = deptByCode.get(u.departmentCode)!
     const inDept = employees.filter((e) => e.departmentId === dept.id && e.status === 'Active')
-    const emp = u.pick === 'head' ? inDept[0] : u.pick === 'admin' ? inDept[1] : inDept[2] ?? inDept[1]
-    if (u.pick === 'admin') emp.jobTitle = 'ERP & Systems Administrator'
+    const emp = u.pick === 'head' ? inDept[0] : inDept[u.pick] ?? inDept[inDept.length - 1]
+    if (u.title) emp.jobTitle = u.title
+    emp.employmentType = 'Full-time'
     return {
       id: `usr_${pad(i + 1, 2)}`,
       username: u.username,
@@ -166,8 +168,8 @@ export function createSeedState(today = todayISO()): DemoState {
   })
   const userByName = (username: string) => users.find((u) => u.username === username)!
   const ceoUser = userByName('ceo')
-  const headUserOf = (deptId: string) => users.find((u) => u.departmentId === deptId && u.level === 'Head of Department') ?? ceoUser
-  const staffUserOf = (deptId: string) => users.find((u) => u.departmentId === deptId && u.level === 'Staff')
+  const headUserOf = (deptId: string) => users.find((u) => u.departmentId === deptId && departments.find((d) => d.id === deptId)?.headEmployeeId === u.employeeId) ?? ceoUser
+  const staffUserOf = (deptId: string) => users.find((u) => u.departmentId === deptId && (u.level === 'Staff' || u.level === 'Sales'))
 
   // ---------- Suppliers ----------
   const suppliers: Supplier[] = SUPPLIER_SEEDS.map((s, i) => {
@@ -206,10 +208,10 @@ export function createSeedState(today = todayISO()): DemoState {
 
   // ---------- Purchase requests ----------
   const purchaseRequests: PurchaseRequest[] = []
-  const procurementOfficer = userByName('staff.procurement')
+  const procurementOfficer = userByName('finance.accountant')
   const prCount = 30
   // Heads, CEO and admin don't raise requests in the seed, so they can approve them.
-  const approverEmployeeIds = new Set(users.filter((u) => u.level !== 'Staff').map((u) => u.employeeId))
+  const approverEmployeeIds = new Set(users.filter((u) => u.level !== 'Staff' && u.level !== 'Sales').map((u) => u.employeeId))
   // The newest requests get explicit statuses so the demo always has work in the approval queue.
   // One pending request per department where possible, so every head has something to approve.
   const RECENT: Array<{ status: PurchaseRequestStatus; title?: string }> = [
@@ -429,14 +431,6 @@ export function createSeedState(today = todayISO()): DemoState {
   }
   expenses.sort((a, b) => b.date.localeCompare(a.date))
 
-  // budgets: trailing-12-month spend plus headroom, rounded to ₦1m
-  for (const d of departments) {
-    const yearAgo = addMonths(today, -12)
-    const spend = sumMinor(expenses.filter((e) => e.departmentId === d.id && e.date > yearAgo).map((e) => e.amountMinor))
-    const factor = 1.08 + rng.next() * 0.2
-    d.annualBudgetMinor = Math.ceil((spend * factor) / (1_000_000 * MINOR)) * 1_000_000 * MINOR
-  }
-
   // ---------- Invoices (12 months) ----------
   const invoices: Invoice[] = []
   let invSeq = 0
@@ -444,8 +438,8 @@ export function createSeedState(today = todayISO()): DemoState {
   for (let m = 13; m >= 0; m--) {
     const monthStart = monthKey(addMonths(today, -m)) + '-01'
     const maxDay = m === 0 ? Number(today.slice(8, 10)) : 28
-    // monthly billing target grows gently (~₦118m → ₦152m) with some noise
-    const targetMajor = (118_000_000 + (13 - m) * 2_600_000) * (0.93 + rng.next() * 0.14) * (m === 0 ? maxDay / 30 : 1)
+    // monthly billing target grows gently (~₦132m → ₦170m) with some noise
+    const targetMajor = (132_000_000 + (13 - m) * 2_900_000) * (0.93 + rng.next() * 0.14) * (m === 0 ? maxDay / 30 : 1)
     const count = m === 0 ? Math.max(3, Math.round((maxDay / 30) * 10)) : rng.int(9, 12)
     const weights = Array.from({ length: count }, () => 0.6 + rng.next())
     const weightSum = weights.reduce((a, b) => a + b, 0)
@@ -490,6 +484,43 @@ export function createSeedState(today = todayISO()): DemoState {
   }
   invoices.sort((a, b) => b.issueDate.localeCompare(a.issueDate))
 
+  // ---------- Direct project costs (cost of sales) ----------
+  // Equipment from OEM distributors and subcontracted works for client projects,
+  // roughly 35% of what is invoiced each month, so gross margin looks realistic.
+  const deliveryDepts = ['ENG', 'PMO', 'MSS'].map((c) => deptByCode.get(c)!)
+  const distributors = suppliers.filter((s) => s.active)
+  for (let m = 13; m >= 0; m--) {
+    const key = monthKey(addMonths(today, -m))
+    const billed = sumMinor(invoices.filter((i) => i.status !== 'Draft' && i.issueDate.startsWith(key)).flatMap((i) => i.lines.map((l) => l.quantity * l.unitPriceMinor)))
+    if (billed === 0) continue
+    const maxDay = m === 0 ? Number(today.slice(8, 10)) : 28
+    const parts = 3
+    for (let k = 0; k < parts; k++) {
+      const share = (0.33 + rng.next() * 0.05) / parts
+      const date = addDays(key + '-01', Math.min(maxDay - 1, 4 + k * 9 + rng.int(0, 3)))
+      const dept = deliveryDepts[k % deliveryDepts.length]
+      pushExpense({
+        date,
+        departmentId: dept.id,
+        category: 'Procurement',
+        description: k === 2 ? `Subcontracted installation works — ${key}` : `Client project equipment (OEM distributor) — ${key}`,
+        payee: distributors[(m * 3 + k) % distributors.length].name,
+        amountMinor: Math.round((billed * share) / (1000 * MINOR)) * 1000 * MINOR,
+        status: paymentStatus(date),
+      })
+    }
+  }
+  expenses.sort((a, b) => b.date.localeCompare(a.date))
+
+  // budgets: trailing-12-month spend plus headroom, rounded to ₦1m
+  for (const d of departments) {
+    const yearAgo = addMonths(today, -12)
+    const spend = sumMinor(expenses.filter((e) => e.departmentId === d.id && e.date > yearAgo).map((e) => e.amountMinor))
+    const factor = 1.08 + rng.next() * 0.2
+    d.annualBudgetMinor = Math.ceil((spend * factor) / (1_000_000 * MINOR)) * 1_000_000 * MINOR
+  }
+
+
   // ---------- Activity & notifications ----------
   const activity: ActivityEntry[] = []
   const recentPRs = [...purchaseRequests].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 10)
@@ -508,11 +539,11 @@ export function createSeedState(today = todayISO()): DemoState {
   }
   const newHires = employees.filter((e) => e.joinDate >= addDays(today, -60))
   for (const e of newHires) {
-    activity.push({ id: `act_emp_${e.id}`, at: iso(e.joinDate, 8, 30), actor: userByName('staff.hr').name, action: `onboarded ${e.firstName} ${e.lastName}`, entityType: 'employee', entityId: e.id, link: `/employees/${e.id}`, departmentId: e.departmentId })
+    activity.push({ id: `act_emp_${e.id}`, at: iso(e.joinDate, 8, 30), actor: userByName('hr.manager').name, action: `onboarded ${e.firstName} ${e.lastName}`, entityType: 'employee', entityId: e.id, link: `/employees/${e.id}`, departmentId: e.departmentId })
   }
   const recentPaid = invoices.filter((i) => i.status === 'Paid' && i.paidDate && i.paidDate >= addDays(today, -14)).slice(0, 4)
   for (const inv of recentPaid) {
-    activity.push({ id: `act_inv_${inv.id}`, at: iso(inv.paidDate!, 13, 10), actor: userByName('staff.finance').name, action: `recorded payment for ${inv.number}`, entityType: 'invoice', entityId: inv.id, link: `/finance/invoices/${inv.id}` })
+    activity.push({ id: `act_inv_${inv.id}`, at: iso(inv.paidDate!, 13, 10), actor: userByName('finance.accountant').name, action: `recorded payment for ${inv.number}`, entityType: 'invoice', entityId: inv.id, link: `/finance/invoices/${inv.id}` })
   }
   activity.sort((a, b) => b.at.localeCompare(a.at))
 
@@ -534,11 +565,28 @@ export function createSeedState(today = todayISO()): DemoState {
         tone: 'warning',
         audience: { departmentIds: [d.id] },
       })),
-    { id: 'ntf_low', at: iso(addDays(today, -1), 16, 40), title: `${lowItems.length} stock items at or below reorder level`, body: 'Stock alerts need attention.', readBy: [], link: '/inventory?stock=alerts', tone: 'danger', audience: { departmentIds: [deptId('PRL'), deptId('ENG')] } },
-    { id: 'ntf_overdue', at: iso(addDays(today, -2), 11, 0), title: `${overdueInv.length} client invoices overdue`, body: 'Follow up with clients on outstanding balances.', readBy: [], link: '/finance?tab=invoices&status=Overdue', tone: 'warning', audience: { departmentIds: [deptId('FIN'), deptId('SBD')] } },
-    { id: 'ntf_payroll', at: iso(addDays(today, -4), 9, 20), title: 'Monthly payroll processed', body: 'Payroll for all departments was recorded.', readBy: [], link: '/finance?tab=expenses&category=Payroll', tone: 'success', audience: { departmentIds: [deptId('FIN'), deptId('HRA')] } },
+    { id: 'ntf_low', at: iso(addDays(today, -1), 16, 40), title: `${lowItems.length} stock items at or below reorder level`, body: 'Stock alerts need attention.', readBy: [], link: '/inventory?stock=alerts', tone: 'danger', audience: { departmentIds: [deptId('FIN'), deptId('ENG')] } },
+    { id: 'ntf_overdue', at: iso(addDays(today, -2), 11, 0), title: `${overdueInv.length} client invoices overdue`, body: 'Follow up with clients on outstanding balances.', readBy: [], link: '/finance?tab=receivables&status=Overdue', tone: 'warning', audience: { departmentIds: [deptId('FIN'), deptId('SBD')] } },
+    { id: 'ntf_payroll', at: iso(addDays(today, -4), 9, 20), title: 'Monthly payroll processed', body: 'Payroll for all departments was recorded.', readBy: [], link: '/finance?tab=payables&category=Payroll', tone: 'success', audience: { departmentIds: [deptId('FIN'), deptId('HRA')] } },
     { id: 'ntf_welcome', at: iso(addDays(today, -6), 10, 0), title: 'Welcome to the EMOCOM ERP demo', body: 'Each login sees only what that role and department may access. All data is fictional.', readBy: [], tone: 'info' },
   ]
+
+  const { work, notifications: workNotifications } = createWorkSeed({ today, departments, employees, users })
+  // vendor & subcontractor registry details for the admin module
+  suppliers.forEach((s, i) => {
+    s.kind = i % 4 === 3 ? 'Subcontractor' : 'Vendor'
+    s.registration = !s.active ? 'Suspended' : i === 10 ? 'Pending review' : 'Approved'
+    s.evaluation =
+      i === 10
+        ? undefined
+        : { quality: Math.min(5, s.rating + (i % 2)), delivery: Math.max(2, s.rating - (i % 3 === 0 ? 1 : 0)), price: 3 + (i % 3), compliance: Math.min(5, 3 + (i % 3)), evaluatedAt: addDays(today, -rng.int(20, 200)), evaluatedBy: userByName('admin').name }
+  })
+  suppliers.push(
+    { id: 'sup_013', code: 'SUP-013', name: 'Towerline Civil Works Ltd', category: 'Tower & civil works', contactName: 'Musa Garba', email: 'projects@towerline.example', phone: '+234 801 455 2190', city: 'Abuja', rating: 4, active: true, kind: 'Subcontractor', registration: 'Approved', evaluation: { quality: 4, delivery: 3, price: 4, compliance: 5, evaluatedAt: addDays(today, -60), evaluatedBy: userByName('admin').name } },
+    { id: 'sup_014', code: 'SUP-014', name: 'Fibrelink Installers Nigeria', category: 'Fibre installation', contactName: 'Ebere Nwosu', email: 'ops@fibrelink.example', phone: '+234 801 733 8042', city: 'Lagos', rating: 3, active: true, kind: 'Subcontractor', registration: 'Pending review' },
+  )
+  notifications.unshift(...workNotifications)
+  notifications.sort((a, b) => b.at.localeCompare(a.at))
 
   return {
     version: APP_CONFIG.storageVersion,
@@ -566,5 +614,6 @@ export function createSeedState(today = todayISO()): DemoState {
     invoices,
     activity,
     notifications,
+    ...work,
   }
 }

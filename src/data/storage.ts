@@ -32,6 +32,13 @@ const demoStateSchema = z
     invoices: z.array(record.extend({ lines: z.array(record) })),
     activity: z.array(record),
     notifications: z.array(record.extend({ readBy: z.array(z.string()) })),
+    projects: z.array(record.extend({ milestones: z.array(record) })),
+    tasks: z.array(record),
+    opportunities: z.array(record),
+    leaveRequests: z.array(record),
+    proposals: z.array(record.extend({ lines: z.array(record), milestones: z.array(record) })),
+    timesheets: z.array(record),
+    securityPolicy: z.object({ mfaRequired: z.boolean() }).passthrough(),
   })
   .passthrough()
 

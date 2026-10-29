@@ -34,11 +34,11 @@ export function checkTransition(pr: PurchaseRequest, action: PRAction, p: Permis
   }
   if (action === 'approve' || action === 'reject') return canApprove(p, pr, prTotal(pr))
   if (action === 'receive') return canReceive(p)
-  // submit / reopen: the requester, their head of department, or an executive
+  // submit / reopen: the requester, their manager, finance, or the secondary admin
   const own = p.user.employeeId === pr.requesterId
-  const head = p.user.level === 'Head of Department' && p.user.departmentId === pr.departmentId
-  if (own || head || p.isExecutive) return { allowed: true }
-  return { allowed: false, reason: 'Only the requester or their head of department can do this.' }
+  const head = p.role === 'Manager' && p.user.departmentId === pr.departmentId
+  if (own || head || p.role === 'Finance' || p.isSecondaryAdmin) return { allowed: true }
+  return { allowed: false, reason: 'Only the requester, their manager or Finance can do this.' }
 }
 
 /** Actions relevant to the request's current status, with policy decisions. */

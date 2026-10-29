@@ -276,7 +276,7 @@ export default function RequestFormPage() {
           {errors.lines?.root?.message && <p className="px-5 pb-3 text-sm text-rose-600">{errors.lines.root.message}</p>}
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-5 py-4">
             <p className="text-xs text-slate-500">
-              Demo approval limits: Head of Department up to ₦5m (own department), Head of Finance up to ₦20m, CEO unlimited. This request goes to: {approvalRoute(total)}.
+              Demo approval limits: team manager up to ₦5m, finance manager up to ₦20m, CEO above that (capital). This request goes to: {approvalRoute(total)}.
             </p>
             <p className="text-sm text-slate-600">
               Request total <span className="tabular ml-2 text-lg font-semibold text-slate-900">{formatMoney(total)}</span>

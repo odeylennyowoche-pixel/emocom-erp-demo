@@ -44,21 +44,35 @@ export const DEPARTMENT_SEEDS: DepartmentSeed[] = [
   { code: 'PRL', slug: 'procurement', name: 'Procurement & Logistics', headcount: 8, headTitle: 'Head of Procurement & Logistics', titles: ['Procurement Officer', 'Store Keeper', 'Logistics Coordinator', 'Fleet Officer'], avgMonthlyPayMajor: 450_000 },
 ]
 
-/** One demo account per department head and one per staff member, plus CEO and Administrator. */
+/**
+ * Demo accounts, one per person, following EMOCOM's agreed account types.
+ * `pick` chooses the person: the department head, or the n-th active staff member.
+ */
 export interface UserSeed {
   username: string
   level: AccessLevel
   departmentCode: string
-  pick: 'head' | 'staff' | 'admin'
+  pick: 'head' | number
+  /** Optional job title override so the account matches its role. */
+  title?: string
 }
 
 export const USER_SEEDS: UserSeed[] = [
-  { username: 'ceo', level: 'CEO', departmentCode: 'EXO', pick: 'head' },
-  { username: 'admin', level: 'Administrator', departmentCode: 'EXO', pick: 'admin' },
-  ...DEPARTMENT_SEEDS.filter((d) => d.code !== 'EXO').flatMap((d): UserSeed[] => [
-    { username: `hod.${d.slug}`, level: 'Head of Department', departmentCode: d.code, pick: 'head' },
-    { username: `staff.${d.slug}`, level: 'Staff', departmentCode: d.code, pick: 'staff' },
-  ]),
+  { username: 'ceo', level: 'Main Admin', departmentCode: 'EXO', pick: 'head' },
+  { username: 'admin', level: 'Secondary Admin', departmentCode: 'EXO', pick: 1, title: 'ERP & Systems Administrator' },
+  { username: 'finance.manager', level: 'Finance', departmentCode: 'FIN', pick: 'head', title: 'Finance Manager' },
+  { username: 'finance.accountant', level: 'Finance', departmentCode: 'FIN', pick: 1, title: 'Accountant' },
+  { username: 'hr.manager', level: 'HR', departmentCode: 'HRA', pick: 'head', title: 'HR Manager' },
+  { username: 'sales.exec', level: 'Sales', departmentCode: 'SBD', pick: 1, title: 'Account Manager' },
+  { username: 'sales.bd', level: 'Sales', departmentCode: 'SBD', pick: 2, title: 'Business Development Executive' },
+  { username: 'manager.sales', level: 'Manager', departmentCode: 'SBD', pick: 'head' },
+  { username: 'manager.engineering', level: 'Manager', departmentCode: 'ENG', pick: 'head' },
+  { username: 'manager.services', level: 'Manager', departmentCode: 'MSS', pick: 'head' },
+  { username: 'manager.projects', level: 'Manager', departmentCode: 'PMO', pick: 'head' },
+  { username: 'staff.presales', level: 'Staff', departmentCode: 'SBD', pick: 3, title: 'Presales Consultant' },
+  { username: 'staff.engineering', level: 'Staff', departmentCode: 'ENG', pick: 1, title: 'Network Engineer' },
+  { username: 'staff.services', level: 'Staff', departmentCode: 'MSS', pick: 1, title: 'NOC Engineer' },
+  { username: 'staff.projects', level: 'Staff', departmentCode: 'PMO', pick: 1, title: 'Project Coordinator' },
 ]
 
 export interface ItemSeed {

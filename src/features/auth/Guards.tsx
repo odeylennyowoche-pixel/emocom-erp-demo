@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Lock } from 'lucide-react'
 import { useData } from '../../data/store'
+import { ACCESS_LEVEL_LABELS } from '../../types'
 import { buttonClasses } from '../../components/ui/Button'
 import { canOpen, type ModuleKey } from './permissions'
 
@@ -21,7 +22,7 @@ export function AccessDenied({ message }: { message?: string }) {
       </div>
       <h1 className="text-xl font-semibold text-slate-900">Access restricted</h1>
       <p className="mt-2 max-w-md text-sm text-slate-500">
-        {message ?? `Your account (${user.level}, ${perms.department?.name ?? 'no department'}) does not have access to this area.`}
+        {message ?? `Your account (${ACCESS_LEVEL_LABELS[user.level]}, ${perms.department?.name ?? 'no department'}) does not have access to this area.`}
       </p>
       <Link to="/" className={buttonClasses('primary', 'md', 'mt-6')}>
         Back to my dashboard

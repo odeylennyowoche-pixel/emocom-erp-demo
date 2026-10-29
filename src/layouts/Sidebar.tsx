@@ -4,7 +4,8 @@ import { useData } from '../data/store'
 import { cn, initials } from '../lib/utils'
 import { NAV_GROUPS } from './navigation'
 import { canOpen } from '../features/auth/permissions'
-import { checkTransition } from '../features/procurement/workflow'
+import { useApprovalQueues } from '../features/approvals/useApprovalQueues'
+import { ACCESS_LEVEL_LABELS } from '../types'
 
 interface SidebarProps {
   collapsed: boolean
@@ -15,9 +16,11 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCloseMobile }: SidebarProps) {
   const { state, perms } = useData()
-  // Badge = requests waiting for THIS person's approval.
-  const awaitingMe = state.purchaseRequests.filter((p) => p.status === 'Pending Approval' && checkTransition(p, 'approve', perms).allowed).length
-  const badges: Record<string, number> = { '/procurement': awaitingMe }
+  // Badges = items waiting for THIS person.
+  const approvals = useApprovalQueues()
+  const myOpenTasks = state.tasks.filter((t) => t.assigneeId === perms.user.employeeId && t.status !== 'Done').length
+  const pendingHandovers = perms.canManageProjects && perms.department?.code !== 'SBD' ? state.opportunities.filter((o) => o.handover?.status === 'Pending').length : 0
+  const badges: Record<string, number> = { '/approvals': approvals.total, '/workspace': myOpenTasks, '/projects': pendingHandovers }
   const groups = NAV_GROUPS.map((g) => ({
     ...g,
     items: g.items
@@ -101,7 +104,7 @@ export function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCloseMobil
             <div className="mb-2 space-y-2">
               <div className="rounded-lg bg-white/5 px-3 py-2 text-xs">
                 <p className="text-slate-400">Signed in as</p>
-                <p className="truncate font-medium text-white">{perms.user.level}</p>
+                <p className="truncate font-medium text-white">{ACCESS_LEVEL_LABELS[perms.user.level]}</p>
                 <p className="truncate text-brand-500">{perms.department?.name}</p>
               </div>
               <div className="rounded-lg bg-brand-500/10 px-3 py-2 text-xs text-brand-200 ring-1 ring-brand-500/25">

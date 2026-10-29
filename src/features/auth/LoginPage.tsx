@@ -6,9 +6,17 @@ import { useData } from '../../data/store'
 import { DomainError, signIn } from '../../data/actions'
 import { cn } from '../../lib/utils'
 import { permissionsFor } from './permissions'
-import type { AccessLevel } from '../../types'
+import { ACCESS_LEVEL_LABELS, type AccessLevel } from '../../types'
 
-const LEVEL_ORDER: Record<AccessLevel, number> = { CEO: 0, Administrator: 1, 'Head of Department': 2, Staff: 3 }
+/** Login cards are grouped by EMOCOM's agreed account types. */
+const GROUPS: Array<{ title: string; levels: AccessLevel[] }> = [
+  { title: 'CEO / MD & administration', levels: ['Main Admin', 'Secondary Admin'] },
+  { title: 'Finance', levels: ['Finance'] },
+  { title: 'Sales', levels: ['Sales'] },
+  { title: 'Human resources', levels: ['HR'] },
+  { title: 'Managers (HOD)', levels: ['Manager'] },
+  { title: 'Staff', levels: ['Staff'] },
+]
 
 export default function LoginPage() {
   const { state, signedIn, commit } = useData()
@@ -25,13 +33,11 @@ export default function LoginPage() {
   }, [])
 
   const groups = useMemo(() => {
-    return state.departments
-      .map((d) => ({
-        department: d,
-        accounts: state.users.filter((u) => u.departmentId === d.id).sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level]),
-      }))
-      .filter((g) => g.accounts.length > 0)
-  }, [state.departments, state.users])
+    return GROUPS.map((g) => ({
+      title: g.title,
+      accounts: state.users.filter((u) => g.levels.includes(u.level)).sort((a, b) => g.levels.indexOf(a.level) - g.levels.indexOf(b.level) || a.username.localeCompare(b.username)),
+    })).filter((g) => g.accounts.length > 0)
+  }, [state.users])
 
   if (signedIn) return <Navigate to={from} replace />
 
@@ -71,7 +77,7 @@ export default function LoginPage() {
             Prototype ERP prepared for EMOCOM Technologies and Consulting Ltd. Each person signs in with their own account and sees only what their role and department allow.
           </p>
           <ul className="mt-8 hidden max-w-md grid-cols-2 gap-3 text-sm sm:grid">
-            {['Department-based access', 'Purchase approvals by limit', 'Stock & asset control', 'Budgets & client invoices'].map((t) => (
+            {['CEO dashboards & final approvals', 'CRM, pipeline & tenders', 'Projects, tasks & timesheets', 'Finance, HR & payroll'].map((t) => (
               <li key={t} className="flex items-center gap-2">
                 <span className="size-1.5 rounded-full bg-brand-500" aria-hidden />
                 {t}
@@ -103,7 +109,7 @@ export default function LoginPage() {
                   autoComplete="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="e.g. hod.sales"
+                  placeholder="e.g. manager.projects"
                   className="block h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-500/25 focus:outline-none"
                 />
               </div>
@@ -150,9 +156,9 @@ export default function LoginPage() {
               </span>
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {groups.map(({ department, accounts }) => (
-                <div key={department.id} className="rounded-xl border border-slate-200 bg-white p-3">
-                  <p className="px-1 pb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">{department.name}</p>
+              {groups.map(({ title, accounts }) => (
+                <div key={title} className="rounded-xl border border-slate-200 bg-white p-3">
+                  <p className="px-1 pb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">{title}</p>
                   <ul className="space-y-1">
                     {accounts.map((u) => {
                       const p = permissionsFor(u, state.departments)
@@ -173,14 +179,14 @@ export default function LoginPage() {
                               <span
                                 className={cn(
                                   'rounded-full px-2 py-0.5 text-[11px] font-medium',
-                                  u.level === 'CEO' || u.level === 'Administrator' ? 'bg-ink-900 text-brand-500' : u.level === 'Head of Department' ? 'bg-brand-100 text-brand-800' : 'bg-slate-100 text-slate-600',
+                                  u.level === 'Main Admin' || u.level === 'Secondary Admin' ? 'bg-ink-900 text-brand-500' : u.level === 'Manager' ? 'bg-brand-100 text-brand-800' : 'bg-slate-100 text-slate-600',
                                 )}
                               >
-                                {u.level}
+                                {u.level === 'Main Admin' ? 'CEO / MD' : u.level === 'Manager' ? (state.departments.find((d) => d.id === u.departmentId)?.code ?? 'Manager') : ACCESS_LEVEL_LABELS[u.level]}
                               </span>
                             </span>
                             <span className="mt-0.5 block truncate text-xs text-slate-500">
-                              {u.name} · {u.title}
+                              {u.name} · {u.title}{u.level === 'Staff' || u.level === 'Sales' ? ` · ${state.departments.find((d) => d.id === u.departmentId)?.code ?? ''}` : ''}
                               {u.status !== 'Active' && ' · suspended'}
                             </span>
                           </button>

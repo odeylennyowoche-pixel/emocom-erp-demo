@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Bell, CheckCheck, ChevronDown, ChevronRight, LogOut, Menu, RotateCcw, Settings, UserCog } from 'lucide-react'
 import { useData } from '../data/store'
+import { ACCESS_LEVEL_LABELS } from '../types'
 import { markAllNotificationsRead, markNotificationRead, signOut } from '../data/actions'
 import { canSeeNotification } from '../features/auth/permissions'
 import { fullName } from '../data/selectors'
@@ -154,7 +155,7 @@ function ProfileMenu() {
         <span className="hidden text-left leading-tight md:block">
           <span className="block max-w-40 truncate text-sm font-medium text-slate-800">{user.name}</span>
           <span className="block max-w-40 truncate text-xs text-slate-500">
-            {user.level} · {perms.department?.code}
+            {ACCESS_LEVEL_LABELS[user.level]} · {perms.department?.code}
           </span>
         </span>
         <ChevronDown className="hidden size-4 text-slate-400 md:block" aria-hidden />
@@ -166,7 +167,7 @@ function ProfileMenu() {
             <p className="truncate text-xs text-slate-500">{user.title}</p>
             <p className="truncate text-xs text-slate-500">{perms.department?.name}</p>
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <span className="rounded-full bg-ink-900 px-2 py-0.5 text-[11px] font-medium text-brand-500">{user.level}</span>
+              <span className="rounded-full bg-ink-900 px-2 py-0.5 text-[11px] font-medium text-brand-500">{ACCESS_LEVEL_LABELS[user.level]}</span>
               <span className="font-mono text-[11px] text-slate-400">@{user.username}</span>
             </div>
             <p className="mt-2 text-xs leading-snug text-slate-600">{perms.summary}</p>

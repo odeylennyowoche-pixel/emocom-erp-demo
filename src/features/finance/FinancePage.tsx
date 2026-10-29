@@ -20,48 +20,68 @@ import { DateRangeInputs, FilterSelect, SearchInput, Toolbar } from '../../compo
 import { StatusBadge } from '../../components/ui/Badge'
 import { AXIS_PROPS, ChartTooltip, compactMoneyTick } from '../../components/charts/chartKit'
 import { ExpensesTab } from './ExpensesTab'
-import { visibleExpenses } from '../auth/permissions'
+import { visibleExpenses, type FinanceTab } from '../auth/permissions'
+import { CashflowTab, ClaimsToPay, CloseTab, LedgerTab, PayrollTab, PurchasingTab, ReceivablesSummary, RevenueTab } from './FinanceWorkTabs'
 
-type TabKey = 'overview' | 'expenses' | 'invoices' | 'transactions'
+type TabKey = FinanceTab
+
+/** Older links used these names; they still open the right section. */
+const ALIASES: Record<string, TabKey> = { invoices: 'receivables', expenses: 'payables', transactions: 'ledger' }
 
 export default function FinancePage() {
   const { state, perms } = useData()
   const allowed = perms.financeTabs
-  const [tabParam, setTab] = useTabParam<TabKey>(allowed[0] ?? 'expenses')
+  const [rawTab, setTab] = useTabParam<string>(allowed[0] ?? 'payables')
+  const tabParam = (ALIASES[rawTab] ?? rawTab) as TabKey
   const tab = allowed.includes(tabParam) ? tabParam : allowed[0]
   const expenseCount = visibleExpenses(perms, state.expenses).length
   const labels: Record<TabKey, { label: string; count?: number }> = {
     overview: { label: 'Overview & budgets' },
-    expenses: { label: perms.finance === 'department' ? 'Department expenses' : 'Expenses', count: expenseCount },
-    invoices: { label: 'Client invoices', count: state.invoices.length },
-    transactions: { label: 'Transactions' },
+    cashflow: { label: 'Cash flow' },
+    ledger: { label: 'General ledger' },
+    receivables: { label: 'Receivables', count: state.invoices.filter((i) => i.status === 'Sent' || i.status === 'Overdue').length },
+    payables: { label: perms.finance === 'department' ? 'Department expenses' : 'Payables & expenses', count: expenseCount },
+    revenue: { label: 'Revenue recognition' },
+    payroll: { label: 'Payroll' },
+    purchasing: { label: 'Purchasing (PR → PO → GRN)', count: state.purchaseRequests.filter((p) => p.status === 'Pending Approval' || p.status === 'Approved').length },
+    close: { label: 'Period close' },
   }
   return (
     <>
       <PageHeader
-        title={perms.finance === 'all' ? 'Finance' : perms.finance === 'department' ? `${perms.department?.name ?? 'Department'} finance` : 'Client invoices'}
+        title={perms.finance === 'all' ? 'Finance' : `${perms.department?.name ?? 'Department'} finance`}
         description={
-          perms.finance === 'all'
-            ? 'Expenses, client invoices, transaction history and departmental budgets.'
-            : perms.finance === 'department'
-              ? 'Your department’s spending against budget, plus the views your role allows.'
-              : 'Read-only view of client invoices and payment status.'
+          perms.readOnly
+            ? 'Read-only view of revenue, cash flow, receivables and revenue recognition.'
+            : perms.finance === 'all'
+              ? 'Ledger, receivables, payables, revenue recognition, period close, cash flow, payroll and purchasing.'
+              : 'Your department’s spending against budget.'
         }
         meta={<span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">Demo module — not an accounting system</span>}
       />
       <Card>
         <div className="px-4 pt-1">
-          <Tabs
-            label="Finance sections"
-            active={tab}
-            onChange={setTab}
-            tabs={allowed.map((k) => ({ key: k, ...labels[k] }))}
-          />
+          <Tabs label="Finance sections" active={tab} onChange={(k) => setTab(k)} tabs={allowed.map((k) => ({ key: k, ...labels[k] }))} />
         </div>
         {tab === 'overview' && <OverviewTab />}
-        {tab === 'expenses' && <ExpensesTab />}
-        {tab === 'invoices' && <InvoicesTab />}
-        {tab === 'transactions' && <TransactionsTab />}
+        {tab === 'cashflow' && <CashflowTab />}
+        {tab === 'ledger' && <LedgerTab transactions={<Card><CardHeader title="Bank transactions" description="Payments received and expenses paid" /><TransactionsTab /></Card>} />}
+        {tab === 'receivables' && (
+          <>
+            <ReceivablesSummary />
+            <InvoicesTab />
+          </>
+        )}
+        {tab === 'payables' && (
+          <>
+            <ClaimsToPay />
+            <ExpensesTab />
+          </>
+        )}
+        {tab === 'revenue' && <RevenueTab />}
+        {tab === 'payroll' && <PayrollTab />}
+        {tab === 'purchasing' && <PurchasingTab />}
+        {tab === 'close' && <CloseTab />}
       </Card>
     </>
   )
@@ -90,8 +110,8 @@ function OverviewTab() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Revenue (fiscal YTD)" value={formatMoneyCompact(revenue)} icon={<ArrowDownLeft className="size-5" />} tone="emerald" hint={`since ${formatDate(start)}`} />
         <StatCard label="Expenses (fiscal YTD)" value={formatMoneyCompact(expenses)} icon={<ArrowUpRight className="size-5" />} tone="purple" hint={`Net ${formatMoneyCompact(revenue - expenses)}`} />
-        <StatCard label="Receivables" value={formatMoneyCompact(receivable)} icon={<FileText className="size-5" />} tone="brand" hint="sent + overdue invoices" to="/finance?tab=invoices" />
-        <StatCard label="Payables" value={formatMoneyCompact(payable)} icon={<Receipt className="size-5" />} tone="amber" hint="pending + overdue expenses" to="/finance?tab=expenses" />
+        <StatCard label="Receivables" value={formatMoneyCompact(receivable)} icon={<FileText className="size-5" />} tone="brand" hint="sent + overdue invoices" to="/finance?tab=receivables" />
+        <StatCard label="Payables" value={formatMoneyCompact(payable)} icon={<Receipt className="size-5" />} tone="amber" hint="pending + overdue expenses" to="/finance?tab=payables" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-5">
@@ -349,7 +369,7 @@ function TransactionsTab() {
         columns={columns}
         rowKey={(t) => t.id}
         rowLabel={(t) => `Open source record ${t.reference}`}
-        onRowClick={(t) => navigate(t.sourceType === 'Invoice' ? `/finance/invoices/${t.sourceId}` : `/finance?tab=expenses&q=${encodeURIComponent(t.reference)}`)}
+        onRowClick={(t) => navigate(t.sourceType === 'Invoice' ? `/finance/invoices/${t.sourceId}` : `/finance?tab=payables&q=${encodeURIComponent(t.reference)}`)}
         initialSort={{ key: 'date', dir: 'desc' }}
         resetKey={`${q}|${direction}|${category}|${from}|${to}`}
       />

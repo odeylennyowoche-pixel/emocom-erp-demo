@@ -3,33 +3,32 @@ import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Building2, Database, Pencil, Plus, RotateCcw, Save, ShieldAlert } from 'lucide-react'
+import { Building2, Database, Pencil, Plus, RotateCcw, Save } from 'lucide-react'
 import { APP_CONFIG } from '../../config/app'
 import { useData } from '../../data/store'
-import { saveDepartment, setUserLevel, setUserStatus, updateOrganization, updatePreferences } from '../../data/actions'
-import { departmentName, employeeById, fullName } from '../../data/selectors'
+import { saveDepartment, updateOrganization, updatePreferences } from '../../data/actions'
+import { employeeById, fullName } from '../../data/selectors'
 import { useTabParam } from '../../hooks/useQueryState'
 import { useAction } from '../../hooks/useAction'
-import { formatDateTime, timeAgo } from '../../lib/dates'
+import { formatDateTime } from '../../lib/dates'
 import { formatMoney, minorToInput, MONEY_INPUT_PATTERN, parseMoneyToMinor } from '../../lib/money'
 import { cn } from '../../lib/utils'
-import { ACCESS_LEVELS, type AccentColor, type AccessLevel, type Department } from '../../types'
+import { type AccentColor, type Department } from '../../types'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Card, CardBody, CardHeader } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Tabs } from '../../components/ui/Tabs'
-import { Badge } from '../../components/ui/Badge'
 import { Checkbox, Field, Input, Select } from '../../components/ui/Form'
 import { ConfirmDialog, Modal } from '../../components/ui/Modal'
 import { useToast } from '../../components/ui/toast-context'
 
-type TabKey = 'organization' | 'departments' | 'users' | 'preferences' | 'data'
+type TabKey = 'organization' | 'departments' | 'preferences' | 'data'
 
 export default function SettingsPage() {
   const [tab, setTab] = useTabParam<TabKey>('organization')
   return (
     <>
-      <PageHeader title="Settings" description="Organisation profile, departments, users and demo preferences." />
+      <PageHeader title="Settings" description="Organisation profile, departments, appearance and demo data. User accounts are managed under Administration." />
       <div className="mb-6">
         <Tabs
           label="Settings sections"
@@ -38,7 +37,6 @@ export default function SettingsPage() {
           tabs={[
             { key: 'organization', label: 'Organisation' },
             { key: 'departments', label: 'Departments' },
-            { key: 'users', label: 'Users & roles' },
             { key: 'preferences', label: 'Appearance & preferences' },
             { key: 'data', label: 'Demo data' },
           ]}
@@ -46,7 +44,6 @@ export default function SettingsPage() {
       </div>
       {tab === 'organization' && <OrganizationSettings />}
       {tab === 'departments' && <DepartmentSettings />}
-      {tab === 'users' && <UserSettings />}
       {tab === 'preferences' && <PreferenceSettings />}
       {tab === 'data' && <DataSettings />}
     </>
@@ -261,133 +258,6 @@ function DepartmentModal({ department, onClose }: { department: Department | 'ne
     </Modal>
   )
 }
-
-const LEVEL_SORT: Record<AccessLevel, number> = { CEO: 0, Administrator: 1, 'Head of Department': 2, Staff: 3 }
-
-function UserSettings() {
-  const { state, user, commit } = useData()
-  const run = useAction()
-  const users = [...state.users].sort(
-    (a, b) => departmentName(state, a.departmentId).localeCompare(departmentName(state, b.departmentId)) || LEVEL_SORT[a.level] - LEVEL_SORT[b.level],
-  )
-  return (
-    <div className="space-y-6">
-      <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-        <ShieldAlert className="mt-0.5 size-5 shrink-0" aria-hidden />
-        <p>
-          <strong>Demonstration feature.</strong> Each person has their own account and sees only what their access level and department allow. In this prototype the checks
-          run in the browser and all accounts share the demo password <code className="rounded bg-white px-1">{APP_CONFIG.demoPassword}</code>. A production system enforces
-          permissions on the server with real passwords or company sign-in.
-        </p>
-      </div>
-      <Card>
-        <CardHeader title="User accounts" description={`${state.users.length} accounts · one per person`} />
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50/70 text-xs font-semibold tracking-wide text-slate-500 uppercase">
-                <th scope="col" className="px-5 py-2.5 text-left">User</th>
-                <th scope="col" className="px-4 py-2.5 text-left">Username</th>
-                <th scope="col" className="px-4 py-2.5 text-left">Department</th>
-                <th scope="col" className="px-4 py-2.5 text-left">Access level</th>
-                <th scope="col" className="px-4 py-2.5 text-left">Last active</th>
-                <th scope="col" className="px-4 py-2.5 text-left">Status</th>
-                <th scope="col" className="px-4 py-2.5" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {users.map((u) => (
-                <tr key={u.id} className={cn(u.id === user.id && 'bg-brand-50/50')}>
-                  <td className="px-5 py-3">
-                    <p className="font-medium text-slate-900">
-                      {u.name} {u.id === user.id && <Badge tone="brand">You</Badge>}
-                    </p>
-                    <p className="text-xs text-slate-500">{u.title}</p>
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-slate-700">{u.username}</td>
-                  <td className="px-4 py-3 text-slate-700">{departmentName(state, u.departmentId)}</td>
-                  <td className="px-4 py-3">
-                    <select
-                      aria-label={`Access level for ${u.name}`}
-                      value={u.level}
-                      disabled={u.id === user.id}
-                      onChange={(e) => run(() => commit((s) => setUserLevel(s, u.id, e.target.value as AccessLevel)), { title: 'Access level updated', description: `${u.name} is now ${e.target.value}.` })}
-                      className="h-8 rounded-md border border-slate-300 bg-white px-2 text-sm disabled:bg-slate-50"
-                    >
-                      {ACCESS_LEVELS.map((r) => (
-                        <option key={r}>{r}</option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600" title={formatDateTime(u.lastActiveAt)}>
-                    {timeAgo(u.lastActiveAt)}
-                  </td>
-                  <td className="px-4 py-3">{u.status === 'Active' ? <Badge tone="success" dot>Active</Badge> : <Badge tone="danger" dot>Suspended</Badge>}</td>
-                  <td className="px-4 py-3 text-right whitespace-nowrap">
-                    {u.id !== user.id && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className={u.status === 'Active' ? 'text-rose-600' : 'text-emerald-700'}
-                        onClick={() => run(() => commit((s) => setUserStatus(s, u.id, u.status === 'Active' ? 'Suspended' : 'Active')), { title: u.status === 'Active' ? 'Account suspended' : 'Account reactivated', description: u.name })}
-                      >
-                        {u.status === 'Active' ? 'Suspend' : 'Reactivate'}
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-      <Card>
-        <CardHeader title="Who can see what" description="Demo access matrix — replace with EMOCOM's real policy" />
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50/70 text-xs font-semibold tracking-wide text-slate-500 uppercase">
-                <th scope="col" className="px-5 py-2.5 text-left">Access</th>
-                <th scope="col" className="px-4 py-2.5 text-left">Dashboard</th>
-                <th scope="col" className="px-4 py-2.5 text-left">Employees</th>
-                <th scope="col" className="px-4 py-2.5 text-left">Procurement</th>
-                <th scope="col" className="px-4 py-2.5 text-left">Finance</th>
-                <th scope="col" className="px-4 py-2.5 text-left">Approvals</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
-              {ACCESS_MATRIX.map((r) => (
-                <tr key={r.who}>
-                  <td className="px-5 py-3 font-medium text-slate-900">{r.who}</td>
-                  <td className="px-4 py-3">{r.dashboard}</td>
-                  <td className="px-4 py-3">{r.employees}</td>
-                  <td className="px-4 py-3">{r.procurement}</td>
-                  <td className="px-4 py-3">{r.finance}</td>
-                  <td className="px-4 py-3">{r.approvals}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-    </div>
-  )
-}
-
-const ACCESS_MATRIX = [
-  { who: 'CEO', dashboard: 'Whole company', employees: 'All', procurement: 'All + suppliers', finance: 'All', approvals: 'Any amount' },
-  { who: 'Administrator', dashboard: 'Whole company', employees: 'All', procurement: 'All + suppliers', finance: 'All', approvals: 'None (runs the system)' },
-  { who: 'Head of Finance', dashboard: 'Whole company', employees: 'Own department', procurement: 'Own department', finance: 'All + budgets', approvals: 'Any department ≤ ₦20m' },
-  { who: 'Head of HR & Admin', dashboard: 'Department', employees: 'All (manage)', procurement: 'Own department', finance: 'Own department', approvals: 'Own department ≤ ₦5m' },
-  { who: 'Head of Procurement', dashboard: 'Department', employees: 'Own department', procurement: 'All + suppliers + receiving', finance: 'Own department', approvals: 'Own department ≤ ₦5m' },
-  { who: 'Head of Sales', dashboard: 'Department', employees: 'Own department', procurement: 'Own department', finance: 'Own department + client invoices', approvals: 'Own department ≤ ₦5m' },
-  { who: 'Other heads of department', dashboard: 'Department', employees: 'Own department', procurement: 'Own department', finance: 'Own department', approvals: 'Own department ≤ ₦5m' },
-  { who: 'HR staff', dashboard: 'Personal', employees: 'All (manage)', procurement: 'Own requests', finance: '—', approvals: '—' },
-  { who: 'Finance staff', dashboard: 'Personal', employees: 'Own profile', procurement: 'Own requests', finance: 'Expenses, invoices, transactions', approvals: '—' },
-  { who: 'Procurement staff', dashboard: 'Personal', employees: 'Own profile', procurement: 'All + suppliers + receiving', finance: '—', approvals: '—' },
-  { who: 'Sales staff', dashboard: 'Personal', employees: 'Own profile', procurement: 'Own requests', finance: 'Client invoices (read)', approvals: '—' },
-  { who: 'Other staff', dashboard: 'Personal', employees: 'Own profile', procurement: 'Own requests', finance: '—', approvals: '—' },
-]
 
 const ACCENTS: Array<{ key: AccentColor; label: string; swatch: string }> = [
   { key: 'gold', label: 'EMOCOM gold', swatch: '#d4af37' },

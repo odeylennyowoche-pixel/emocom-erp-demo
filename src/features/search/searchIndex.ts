@@ -68,7 +68,7 @@ export function searchAll(state: DemoState, perms: Permissions, query: string, l
     })),
   )
   results.push(
-    ...take((perms.financeTabs.includes('invoices') ? state.invoices : []).filter((i) => includesText([i.number, i.customer.name], q))).map((i) => ({
+    ...take((perms.financeTabs.includes('receivables') ? state.invoices : []).filter((i) => includesText([i.number, i.customer.name], q))).map((i) => ({
       id: i.id,
       group: 'Invoices' as const,
       title: `${i.number} — ${i.customer.name}`,

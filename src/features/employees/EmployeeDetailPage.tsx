@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Mail, MapPin, Pencil, Phone, Trash2, UserCheck, UserMinus, Plane } from 'lucide-react'
 import { useData } from '../../data/store'
+import { ACCESS_LEVEL_LABELS } from '../../types'
 import { deleteEmployee, employeeReferences, updateEmployee, type EmployeeInput } from '../../data/actions'
 import { departmentName, employeeById, fullName, prTotal } from '../../data/selectors'
 import { useAction } from '../../hooks/useAction'
@@ -103,7 +104,7 @@ export default function EmployeeDetailPage() {
                     ),
                   },
                   { label: 'Direct reports', value: reports.length },
-                  { label: 'ERP account', value: linkedUser ? <Badge tone="brand">{linkedUser.level} · @{linkedUser.username}</Badge> : 'None' },
+                  { label: 'ERP account', value: linkedUser ? <Badge tone="brand">{ACCESS_LEVEL_LABELS[linkedUser.level]} · @{linkedUser.username}</Badge> : 'None' },
                 ]}
               />
             </CardBody>
