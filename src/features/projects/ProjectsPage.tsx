@@ -10,7 +10,7 @@ import { useQueryState } from '../../hooks/useQueryState'
 import { addDays, formatDate, todayISO } from '../../lib/dates'
 import { formatMoneyCompact, sumMinor } from '../../lib/money'
 import { includesText } from '../../lib/utils'
-import { PROJECT_STATUSES, type Project } from '../../types'
+import { PROJECT_STATUSES } from '../../types'
 import { LIMITS } from '../../config/approvals'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Card, CardHeader } from '../../components/ui/Card'
@@ -21,14 +21,7 @@ import { FilterSelect, SearchInput, Toolbar } from '../../components/ui/Toolbar'
 import { StatusBadge } from '../../components/ui/Badge'
 import { FormModal, formValue } from '../../components/ui/FormModal'
 import { ProgressBar } from '../../components/ui/Progress'
-import type { Permissions } from '../auth/permissions'
-
-export function visibleProjects(p: Permissions, list: Project[]): Project[] {
-  if (p.projects === 'all') return list
-  if (p.projects === 'department') return list.filter((x) => x.departmentId === p.user.departmentId)
-  if (p.projects === 'self') return list.filter((x) => x.memberIds.includes(p.user.employeeId ?? ''))
-  return []
-}
+import { visibleProjects } from '../auth/scopes'
 
 export default function ProjectsPage() {
   const { state, perms, commitWith } = useData()

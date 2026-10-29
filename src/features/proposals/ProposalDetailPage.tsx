@@ -17,7 +17,7 @@ import { Field, Input, Select, Textarea } from '../../components/ui/Form'
 import { Notice, ProgressBar } from '../../components/ui/Progress'
 import { NotFoundPage } from '../../app/RouteError'
 import { AccessDenied } from '../auth/Guards'
-import { visibleProposals } from './ProposalsPage'
+import { visibleProposals } from '../auth/scopes'
 
 interface LineDraft {
   id: string

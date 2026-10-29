@@ -2,9 +2,10 @@ import { formatMoney } from '../../lib/money'
 import { includesText } from '../../lib/utils'
 import { departmentName, fullName, invoiceTotal, prTotal } from '../../data/selectors'
 import type { DemoState } from '../../types'
-import { visibleEmployees, visibleRequests, type Permissions } from '../auth/permissions'
+import { canOpen, visibleEmployees, visibleRequests, type Permissions } from '../auth/permissions'
+import { visibleProjects, visibleProposals } from '../auth/scopes'
 
-export type SearchGroup = 'Employees' | 'Inventory' | 'Assets' | 'Purchase requests' | 'Suppliers' | 'Invoices'
+export type SearchGroup = 'Employees' | 'Inventory' | 'Assets' | 'Purchase requests' | 'Suppliers' | 'Invoices' | 'Projects' | 'Opportunities' | 'Proposals'
 
 export interface SearchResult {
   id: string
@@ -74,6 +75,33 @@ export function searchAll(state: DemoState, perms: Permissions, query: string, l
       title: `${i.number} — ${i.customer.name}`,
       subtitle: `${i.status} · ${formatMoney(invoiceTotal(i))}`,
       to: `/finance/invoices/${i.id}`,
+    })),
+  )
+  results.push(
+    ...take((canOpen(perms, 'projects') ? visibleProjects(perms, state.projects) : []).filter((p) => includesText([p.name, p.code, p.clientName], q))).map((p) => ({
+      id: p.id,
+      group: 'Projects' as const,
+      title: p.name,
+      subtitle: `${p.code} · ${p.clientName} · ${p.status}`,
+      to: `/projects/${p.id}`,
+    })),
+  )
+  results.push(
+    ...take((perms.salesTabs.includes('pipeline') ? state.opportunities : []).filter((o) => includesText([o.name, o.code, o.clientName], q))).map((o) => ({
+      id: o.id,
+      group: 'Opportunities' as const,
+      title: o.name,
+      subtitle: `${o.code} · ${o.clientName} · ${o.stage}`,
+      to: '/sales',
+    })),
+  )
+  results.push(
+    ...take(visibleProposals(perms, state.proposals).filter((p) => includesText([p.title, p.code, p.clientName], q))).map((p) => ({
+      id: p.id,
+      group: 'Proposals' as const,
+      title: p.title,
+      subtitle: `${p.code} · ${p.clientName} · ${p.status}`,
+      to: `/proposals/${p.id}`,
     })),
   )
   return results

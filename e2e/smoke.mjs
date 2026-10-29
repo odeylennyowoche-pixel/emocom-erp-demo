@@ -53,7 +53,10 @@ const fail = (msg) => {
   failures++
   console.log(`::error title=Smoke test::${msg}`)
 }
-const note = (msg) => console.log(`::notice title=Smoke test::${msg}`)
+// GitHub shows only 10 notices per step, so passes are collected and printed together.
+const passed = []
+const note = (msg) => passed.push(msg)
+let step = ''
 
 const browser = await chromium.launch()
 const context = await browser.newContext({ viewport: { width: 1366, height: 900 } })
@@ -133,7 +136,7 @@ async function flow(name, fn) {
     await fn()
     if (errors.length) fail(`${name}: console errors: ${errors.slice(0, 3).join(' | ')}`)
   } catch (e) {
-    fail(`${name}: ${e.message.split('\n')[0]}`)
+    fail(`${name} [${step}]: ${e.message.split('\n')[0]}`)
     await page.goto(BASE + '#/login').catch(() => {})
   }
 }
@@ -190,28 +193,36 @@ await flow('project approval', async () => {
 // 5. staff logs time and requests leave
 await flow('timesheet & leave', async () => {
   await signIn('staff.services')
+  step = 'log time'
   await page.goto(BASE + '#/workspace?tab=timesheets')
   await page.getByRole('button', { name: 'Add', exact: true }).click()
   await page.getByText('Time logged').first().waitFor()
+  step = 'open leave form'
   await page.goto(BASE + '#/workspace?tab=leave')
   await page.getByRole('button', { name: 'Request leave' }).click()
-  await page.getByLabel('Reason').fill('Family visit')
+  const dialog = page.getByRole('dialog')
+  await dialog.waitFor()
+  step = 'fill reason'
+  await dialog.getByLabel('Reason').fill('Family visit')
   const d = new Date()
   d.setDate(d.getDate() + 70 + ((8 - d.getDay()) % 7)) // a Monday about ten weeks out
   const iso = (x) => x.toISOString().slice(0, 10)
   const end = new Date(d)
   end.setDate(end.getDate() + 2)
-  await page.getByLabel('From', { exact: true }).fill(iso(d))
-  await page.getByLabel('To', { exact: true }).fill(iso(end))
-  await page.getByRole('dialog').getByRole('button', { name: 'Submit request' }).click()
+  step = 'fill dates'
+  await dialog.locator('input[type="date"]').nth(0).fill(iso(d))
+  await dialog.locator('input[type="date"]').nth(1).fill(iso(end))
+  step = 'submit'
+  await dialog.getByRole('button', { name: 'Submit request' }).click()
   await page.getByText('Leave requested').first().waitFor()
   note('timesheet & leave: staff.services logged time and requested leave')
   await signOut()
 })
 
 await browser.close()
+console.log(`::notice title=Smoke test passes::${passed.join(' || ')}`)
 if (failures) {
   console.log(`${failures} smoke-test failure(s)`)
   process.exit(1)
 }
-note('All smoke tests passed')
+console.log('::notice title=Smoke test::All smoke tests passed')

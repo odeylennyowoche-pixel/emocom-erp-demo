@@ -22,7 +22,7 @@ import { EmptyState } from '../../components/ui/EmptyState'
 import { Notice, ProgressBar } from '../../components/ui/Progress'
 import { NotFoundPage } from '../../app/RouteError'
 import { AccessDenied } from '../auth/Guards'
-import { visibleProjects } from './ProjectsPage'
+import { visibleProjects } from '../auth/scopes'
 
 export default function ProjectDetailPage() {
   const { id } = useParams()

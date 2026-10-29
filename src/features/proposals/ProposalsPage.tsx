@@ -6,7 +6,7 @@ import { useQueryState } from '../../hooks/useQueryState'
 import { formatDate, todayISO } from '../../lib/dates'
 import { formatMoney } from '../../lib/money'
 import { includesText } from '../../lib/utils'
-import { PROPOSAL_STATUSES, type Proposal } from '../../types'
+import { PROPOSAL_STATUSES } from '../../types'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Card } from '../../components/ui/Card'
 import { ButtonLink } from '../../components/ui/Button'
@@ -15,14 +15,7 @@ import { FilterSelect, SearchInput, Toolbar } from '../../components/ui/Toolbar'
 import { Badge, StatusBadge } from '../../components/ui/Badge'
 import { EmptyState } from '../../components/ui/EmptyState'
 import { ProgressBar } from '../../components/ui/Progress'
-import type { Permissions } from '../auth/permissions'
-
-export function visibleProposals(p: Permissions, list: Proposal[]): Proposal[] {
-  if (p.proposals === 'all') return list
-  if (p.proposals === 'department') return list.filter((x) => x.departmentId === p.user.departmentId)
-  if (p.proposals === 'self') return list.filter((x) => x.ownerUserId === p.user.id)
-  return []
-}
+import { visibleProposals } from '../auth/scopes'
 
 export default function ProposalsPage() {
   const { state, perms } = useData()

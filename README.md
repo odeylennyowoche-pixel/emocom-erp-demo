@@ -7,19 +7,23 @@ and access limited by role and department. All people, clients and figures are *
 ## Demo logins
 
 Password for every account: `emocom2026` (shown on the login page; demo only, not real security).
+Account types follow EMOCOM's agreed structure.
 
-| Username | Who | Sees |
+| Username | Account type | Works with |
 | --- | --- | --- |
-| `ceo` | Managing Director & CEO | Everything; approves any request |
-| `admin` | ERP & Systems Administrator | Everything; manages users & settings; no approvals |
-| `hod.finance` | Head of Finance | Company finance, budgets, all reports; approves any dept ≤ ₦20m |
-| `hod.hr` | Head of HR & Admin | All staff records (manage); own dept spend; approves HR requests ≤ ₦5m |
-| `hod.procurement` | Head of Procurement & Logistics | All stock, suppliers, requests, receiving; approves own dept ≤ ₦5m |
-| `hod.sales` | Head of Sales & BD | Sales team, client invoices, own dept spend; approves Sales ≤ ₦5m |
-| `hod.engineering`, `hod.services`, `hod.projects` | Other heads | Own team, requests, spend and reports; approve own dept ≤ ₦5m |
-| `staff.<dept>` (sales, engineering, services, projects, finance, hr, procurement) | Staff | Own profile, own requests, stock availability, plus their department's work (e.g. Finance staff record expenses; HR staff maintain records) |
+| `ceo` | CEO / MD — main admin | Executive dashboards (revenue, gross margin, staff, pipeline, cash flow, OEM partners, inventory/assets, projects); final approvals; read-only elsewhere |
+| `admin` | Secondary admin | Partner & OEM registry, sales contacts, vendors & subcontractors, licences, IT asset register, user accounts, integrations (simulated), audit log, backups, security policies |
+| `finance.manager`, `finance.accountant` | Finance | Ledger & trial balance, receivables, payables, revenue recognition, period close, cash flow, payroll, requisition → PO → GRN. The manager approves purchases ≤ ₦20m and closes periods |
+| `hr.manager` | HR | Employee master data, recruitment, on/offboarding, leave & attendance, KPIs & appraisals, learning & certifications |
+| `sales.exec`, `sales.bd` | Sales | CRM (leads, contacts, clients), pipeline, client invoices & payment status, forecast & win/loss, won-deal handover, RFQ / tender / EOI, proposals |
+| `manager.sales`, `manager.engineering`, `manager.services`, `manager.projects` | Manager (HOD) | Team projects, task allocation, milestones, change requests, status reports, team leave & claims, utilisation, appraisals, IT assets |
+| `staff.presales`, `staff.engineering`, `staff.services`, `staff.projects` | Staff | Own tasks, project calendar, timesheets, leave & claims, payslip/tax/pension/HMO, skills & certifications, proposals & quotations — own data only |
 
-Try: sign in as `staff.sales` and raise a request → sign in as `hod.sales` and approve it → sign in as `staff.procurement` and mark it received.
+**Demo approval limits:** managers approve their team's purchases up to ₦5m and change requests up to ₦10m; the finance manager approves purchases up to ₦20m;
+the CEO gives final approval above that (capital) and for projects or contracts over ₦50m. Leave and claims go to the employee's manager (leave can also be approved by HR).
+Nobody approves their own request.
+
+Try: `sales.exec` hands over a won deal → `manager.projects` accepts it → `ceo` approves the project; or `staff.engineering` completes a task and requests leave → `manager.engineering` approves.
 
 ## Sharing the demo
 
@@ -54,27 +58,28 @@ No global state library — a small context store (`src/data`) holds the demo st
 
 | Route | What it shows |
 | --- | --- |
-| `/` | Executive dashboard — KPIs, revenue vs expenses, spend by department, transactions, items needing attention, headcount, activity. Date-range filter (`?range=`). |
-| `/employees` | Directory with search, department/status/type filters, sorting, pagination, CSV export |
-| `/employees/new`, `/employees/:id`, `/employees/:id/edit` | Add (validated), detail (assets, requests, status changes, delete with safeguards), edit |
-| `/inventory` | Tabs: stock items, assets register (add/edit modal), stock movements |
-| `/inventory/items/new`, `/inventory/items/:id`, `/inventory/items/:id/edit` | Item form, item detail with receive / issue / stock-count, balance chart, movement history |
-| `/procurement` | Tabs: purchase requests (status pipeline, filters, export) and suppliers (add/edit) |
-| `/procurement/requests/new`, `/procurement/requests/:id`, `/procurement/requests/:id/edit` | Multi-line request form, detail with approval workflow, history, print |
-| `/finance` | Tabs: overview & budgets, expenses (record / mark paid), invoices, transactions |
-| `/finance/invoices/:id` | Printable invoice with status actions |
-| `/reports` | Employee, inventory, procurement and expense summaries; date range; CSV export; print |
+| `/` | Dashboard for the signed-in account type (CEO, admin, finance, sales, HR, manager or staff) |
+| `/approvals` | One inbox for purchases & capital, projects & contracts, change requests, leave and expense claims |
+| `/workspace` | My tasks & milestone tracker, project calendar, timesheets, leave & claims, pay & benefits, skills & certifications |
+| `/proposals`, `/proposals/:id` | Proposal / quotation builder with line items and a milestone tracker |
+| `/sales` | Pipeline board, leads, clients & contacts, RFQ / tender / EOI register, forecast & win/loss, handover, client invoices |
+| `/projects`, `/projects/:id` | Projects overview; project detail with tasks, milestones, team utilisation, change requests and status reports |
+| `/team` | Team performance & utilisation, appraisals, IT asset register |
+| `/hr` | Master data summary, recruitment pipeline, on/offboarding checklists, leave & attendance, performance, learning |
+| `/finance` | Overview & budgets, cash flow, general ledger, receivables, payables, revenue recognition, payroll, purchasing, period close |
+| `/admin` | Partners & OEMs, sales contacts, vendors & subcontractors, licences, IT assets, user accounts, integrations, audit log, backups, security |
+| `/employees`, `/inventory`, `/procurement`, `/reports`, `/settings` | Employee records, stock & assets, requisitions, reports with CSV export, organisation settings |
 | `/login` | Sign-in with per-person demo accounts |
-| `/settings` | Organisation profile, departments, user accounts & access levels, access matrix, appearance, demo-data reset (CEO/admin only) |
-| `/search?q=` | Global search results (also Ctrl+K from anywhere) |
 
 ## Key workflows
 
 - **Purchase request**: Draft → Pending Approval → Approved → Received (or Rejected → revise as Draft).
   Invalid or repeated transitions are blocked. Every change writes history, an activity entry and a notification.
   On **Received**, linked inventory items are restocked (stock movement recorded) and a pending Procurement expense is created in Finance.
-- **Access control** (`src/features/auth/permissions.ts`): one matrix decides modules, record scope (company / department / own) and actions per access level and department.
-- **Demo approval rules**: Head of Department ≤ ₦5m (own department), Head of Finance ≤ ₦20m (any), CEO unlimited; nobody approves their own request.
+- **Access control** (`src/features/auth/permissions.ts`): one matrix decides modules, record scope (company / department / own) and actions per account type and department.
+- **Approvals** (`src/config/approvals.ts`, `src/features/approvals/rules.ts`): demo limits above; every decision is logged and notifies the requester.
+- **Won deal → project**: sales hands over, a delivery manager accepts (project created), projects over ₦50m wait for the CEO.
+- **Finance views** (`src/data/workSelectors.ts`) are illustrative summaries of demo data: cash flow, ledger, aging, percentage-of-completion revenue, payroll with pension at 8% / 10% and a flat illustrative tax line (not PAYE).
 - **Inventory**: receive / issue / count adjustments with validation (no negative stock); low-stock notifications.
 - **Finance**: expense recording, mark paid, invoice sent/paid/overdue. Transactions are a derived view of paid invoices and paid expenses.
 
@@ -95,10 +100,10 @@ src/
 
 ### Data & consistency
 
-- One typed, related dataset (`src/data/seed.ts`) — departments, 86 employees, suppliers, 33 stock items with movement history, assets, purchase requests, 14 months of expenses and invoices.
+- One typed, related dataset (`src/data/seed.ts`, `src/data/seedWork.ts`) — departments, 79 employees, suppliers & subcontractors, stock and assets, purchase requests, 14 months of expenses and invoices, plus partners, CRM, tenders, proposals, projects, tasks, timesheets, leave, claims, appraisals, certifications, licences and integrations.
 - Every page reads figures through `src/data/selectors.ts`, so dashboard, modules and reports always agree.
 - Money is stored as **integer minor units** (kobo) and never multiplied as floats.
-- Storage key is versioned (`enterpriseone.demo-state.v1`); malformed data is detected and re-seeded; **Settings → Demo data → Reset** restores the original dataset.
+- Storage key is versioned (`emocom-erp.demo-state.v4`); malformed data is detected and re-seeded; **Settings → Demo data → Reset** restores the original dataset.
 - `src/data/actions.ts` contains pure state transitions — each maps naturally to a future API endpoint.
 
 ## Known limitations
@@ -109,6 +114,8 @@ src/
 - No real authentication, audit log integrity, tax, double-entry accounting, payments or bank integration.
 - Currency is display-configurable in `src/config/app.ts`; amounts are not converted.
 - Invoices cannot be created in the UI yet (status changes only).
+- Integrations, backups and security policies are simulated; partner entries other than OpenText and Mitsumi Distribution are examples to replace.
+- Payroll and tax figures are illustrative, not a payroll engine.
 - Charts and fonts load from the bundle; the Inter font uses Google Fonts when online and falls back to system fonts offline.
 
 ## Production roadmap (not implemented)
