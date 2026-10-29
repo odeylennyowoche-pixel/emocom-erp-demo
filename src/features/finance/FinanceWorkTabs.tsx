@@ -285,7 +285,7 @@ export function PayrollTab() {
   const staff = state.employees.filter((e) => e.status !== 'Inactive' && includesText([fullName(e), e.jobTitle, e.employeeNo], q))
   return (
     <div className="space-y-6 p-4 sm:p-5">
-      <Notice tone="warning">Illustrative payroll: pension at {PAY_RULES.pensionEmployee * 100}% employee / {PAY_RULES.pensionEmployer * 100}% employer on basic + housing + transport; income tax shown as a flat {PAY_RULES.illustrativeTaxRate * 100}% estimate, not a PAYE calculation. Real payroll needs validated tax rules.</Notice>
+      <Notice tone="warning">Illustrative payroll: pension at {Math.round(PAY_RULES.pensionEmployee * 100)}% employee / {Math.round(PAY_RULES.pensionEmployer * 100)}% employer on basic + housing + transport; income tax shown as a flat {Math.round(PAY_RULES.illustrativeTaxRate * 100)}% estimate, not a PAYE calculation. Real payroll needs validated tax rules.</Notice>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Monthly gross payroll" value={formatMoneyCompact(totals.gross)} icon={<Wallet className="size-5" />} />
         <StatCard label="Net pay to staff" value={formatMoneyCompact(totals.net)} icon={<Wallet className="size-5" />} tone="emerald" />

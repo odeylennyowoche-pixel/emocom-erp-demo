@@ -253,6 +253,9 @@ export function setProposalStatus(state: DemoState, id: string, status: Proposal
   ensure(canEditProposal(perms(state), pr), 'You can only update your own proposals.')
   const allowed: Record<ProposalStatus, ProposalStatus[]> = { Draft: ['In review'], 'In review': ['Draft', 'Submitted'], Submitted: ['Accepted', 'Declined'], Accepted: [], Declined: [] }
   ensure(allowed[pr.status].includes(status), `Cannot move a ${pr.status.toLowerCase()} proposal to ${status.toLowerCase()}.`)
+  const p = perms(state)
+  // internal review: the manager (or sales manager) signs off before it goes to the client
+  if (pr.status === 'In review' && status === 'Submitted') ensure(p.role === 'Manager' || p.sales === 'manage', 'Internal review is signed off by your manager before submission.')
   const milestones = status === 'Submitted' ? pr.milestones.map((m) => (m.done ? m : { ...m, done: true, doneAt: todayISO() })) : pr.milestones
   return withActivity({ ...state, proposals: upsert(state.proposals, { ...pr, status, milestones }) }, `marked ${pr.code} as ${status.toLowerCase()}`, 'sales', id, `/proposals/${id}`)
 }

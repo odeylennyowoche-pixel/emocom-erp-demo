@@ -175,7 +175,7 @@ function CalendarTab() {
     const map = new Map<string, Ev[]>()
     const add = (d: string, e: Ev) => map.set(d, [...(map.get(d) ?? []), e])
     state.tasks.filter((t) => t.assigneeId === empId).forEach((t) => add(t.dueDate, { label: `${t.title}`, kind: 'due', tone: t.status === 'Done' ? 'bg-emerald-50 text-emerald-800' : t.dueDate < today ? 'bg-rose-50 text-rose-800' : 'bg-brand-50 text-brand-800' }))
-    myProjects.forEach((p) => p.milestones.forEach((m) => add(m.dueDate, { label: `◆ ${m.name}`, kind: 'milestone', tone: 'bg-ink-900 text-brand-400' })))
+    myProjects.forEach((p) => p.milestones.forEach((m) => add(m.dueDate, { label: `◆ ${m.name}`, kind: 'milestone', tone: 'bg-ink-900 text-brand-500' })))
     state.leaveRequests
       .filter((l) => l.employeeId === empId && l.status !== 'Rejected')
       .forEach((l) => {
@@ -464,7 +464,7 @@ function PayTab() {
         <div className="space-y-4 text-sm">
           <SlipSection title="Earnings" rows={slip.earnings} total={slip.gross} totalLabel="Gross pay" />
           <SlipSection title="Deductions" rows={slip.deductions} total={slip.totalDeductions} totalLabel="Total deductions" />
-          <div className="flex justify-between rounded-lg bg-ink-900 px-4 py-3 text-white"><span className="font-medium">Net pay</span><span className="tabular font-semibold text-brand-400">{formatMoney(slip.net)}</span></div>
+          <div className="flex justify-between rounded-lg bg-ink-900 px-4 py-3 text-white"><span className="font-medium">Net pay</span><span className="tabular font-semibold text-brand-500">{formatMoney(slip.net)}</span></div>
           <p className="text-xs text-slate-500">Employer pension contribution (10%): {formatMoney(slip.employerPension)}. Illustrative demo payslip.</p>
         </div>
       </Modal>

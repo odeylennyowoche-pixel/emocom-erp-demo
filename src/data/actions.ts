@@ -292,12 +292,12 @@ export function transitionPurchaseRequest(state: DemoState, id: string, action: 
   const link = `/procurement/requests/${id}`
   next = withActivity(next, `${def.verb} ${pr.code}`, 'purchaseRequest', id, link, pr.departmentId)
   const tone = action === 'approve' ? 'success' : action === 'reject' ? 'danger' : 'info'
-  // The requester's department always hears about it; Procurement is told once goods can be ordered or arrive.
+  // The requester and their manager always hear about it; Finance is told once a PO can be issued or goods arrive.
   const requesterUser = next.users.find((u) => u.employeeId === pr.requesterId)
-  const prl = next.departments.find((d) => d.code === 'FIN')
+  const managerUser = next.users.find((u) => u.employeeId === next.departments.find((d) => d.id === pr.departmentId)?.headEmployeeId)
+  const finance = action === 'approve' || action === 'receive' || action === 'submit' ? next.users.filter((u) => u.level === 'Finance').map((u) => u.id) : []
   const audience: NotificationAudience = {
-    departmentIds: [pr.departmentId, ...(prl && (action === 'approve' || action === 'receive') ? [prl.id] : [])],
-    userIds: requesterUser ? [requesterUser.id] : [],
+    userIds: [...(requesterUser ? [requesterUser.id] : []), ...(managerUser ? [managerUser.id] : []), ...finance],
   }
   next = withNotification(next, {
     title: `${pr.code} ${def.verb}`,
@@ -400,5 +400,5 @@ export function markAllNotificationsRead(state: DemoState, ids: string[]): DemoS
 }
 
 function procurementAudience(state: DemoState): NotificationAudience {
-  return { departmentIds: state.departments.filter((d) => d.code === 'FIN' || d.code === 'ENG').map((d) => d.id) }
+  return { userIds: state.users.filter((u) => u.level === 'Finance' || u.level === 'Secondary Admin').map((u) => u.id) }
 }

@@ -550,7 +550,6 @@ export function createSeedState(today = todayISO()): DemoState {
   const pending = purchaseRequests.filter((p) => p.status === 'Pending Approval')
   const lowItems = inventory.filter((i) => i.quantity <= i.reorderLevel)
   const overdueInv = invoices.filter((i) => i.status === 'Overdue')
-  const deptId = (code: string) => deptByCode.get(code)!.id
   const notifications: AppNotification[] = [
     ...departments
       .map((d) => ({ d, count: pending.filter((p) => p.departmentId === d.id).length }))
@@ -563,11 +562,11 @@ export function createSeedState(today = todayISO()): DemoState {
         readBy: [],
         link: '/procurement?status=Pending%20Approval',
         tone: 'warning',
-        audience: { departmentIds: [d.id] },
+        audience: { userIds: users.filter((u) => u.employeeId === d.headEmployeeId || u.username === 'finance.manager').map((u) => u.id) },
       })),
-    { id: 'ntf_low', at: iso(addDays(today, -1), 16, 40), title: `${lowItems.length} stock items at or below reorder level`, body: 'Stock alerts need attention.', readBy: [], link: '/inventory?stock=alerts', tone: 'danger', audience: { departmentIds: [deptId('FIN'), deptId('ENG')] } },
-    { id: 'ntf_overdue', at: iso(addDays(today, -2), 11, 0), title: `${overdueInv.length} client invoices overdue`, body: 'Follow up with clients on outstanding balances.', readBy: [], link: '/finance?tab=receivables&status=Overdue', tone: 'warning', audience: { departmentIds: [deptId('FIN'), deptId('SBD')] } },
-    { id: 'ntf_payroll', at: iso(addDays(today, -4), 9, 20), title: 'Monthly payroll processed', body: 'Payroll for all departments was recorded.', readBy: [], link: '/finance?tab=payables&category=Payroll', tone: 'success', audience: { departmentIds: [deptId('FIN'), deptId('HRA')] } },
+    { id: 'ntf_low', at: iso(addDays(today, -1), 16, 40), title: `${lowItems.length} stock items at or below reorder level`, body: 'Stock alerts need attention.', readBy: [], link: '/inventory?stock=alerts', tone: 'danger', audience: { userIds: users.filter((u) => u.level === 'Finance' || u.level === 'Secondary Admin' || u.username === 'manager.engineering').map((u) => u.id) } },
+    { id: 'ntf_overdue', at: iso(addDays(today, -2), 11, 0), title: `${overdueInv.length} client invoices overdue`, body: 'Follow up with clients on outstanding balances.', readBy: [], link: '/finance?tab=receivables&status=Overdue', tone: 'warning', audience: { userIds: users.filter((u) => u.level === 'Finance' || u.level === 'Sales' || u.username === 'manager.sales').map((u) => u.id) } },
+    { id: 'ntf_payroll', at: iso(addDays(today, -4), 9, 20), title: 'Monthly payroll processed', body: 'Payroll for all departments was recorded.', readBy: [], link: '/finance?tab=payables&category=Payroll', tone: 'success', audience: { userIds: users.filter((u) => u.level === 'Finance' || u.level === 'HR').map((u) => u.id) } },
     { id: 'ntf_welcome', at: iso(addDays(today, -6), 10, 0), title: 'Welcome to the EMOCOM ERP demo', body: 'Each login sees only what that role and department may access. All data is fictional.', readBy: [], tone: 'info' },
   ]
 

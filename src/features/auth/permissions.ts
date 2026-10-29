@@ -189,7 +189,6 @@ export function permissionsFor(user: AppUser, departments: Department[]): Permis
         workspaceTabs: [],
         hrTabs: ['people', 'performance'],
         adminTabs: ['partners', 'itassets', 'audit'],
-        leaveApproval: 'all',
         claimApproval: 'all',
         changeRequestLimitMinor: Number.POSITIVE_INFINITY,
         changeRequestScope: 'all',

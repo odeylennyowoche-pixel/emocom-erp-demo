@@ -161,7 +161,8 @@ export function CeoDashboard() {
   const fy = budgetSummary(state, today).fyStart
   const gmYtd = grossMargin(state, fy, today)
   const prevYtd = grossMargin(state, addMonths(fy, -12), addMonths(today, -12))
-  const revTrend = prevYtd.revenue ? ((gmYtd.revenue - prevYtd.revenue) / prevYtd.revenue) * 100 : undefined
+  const dataStart = state.invoices.reduce((min, i) => (i.issueDate < min ? i.issueDate : min), today)
+  const revTrend = prevYtd.revenue && dataStart <= addMonths(fy, -12) ? ((gmYtd.revenue - prevYtd.revenue) / prevYtd.revenue) * 100 : undefined
   const flow = cashFlow(state, months)
   const margin = monthlyMargin(state, months).map((m) => ({ month: monthLabel(m.month), Revenue: toMajorForDisplay(m.revenue), 'Gross profit': toMajorForDisplay(m.grossProfit), 'Margin %': Math.round(m.marginPct * 10) / 10 }))
   const opps = state.opportunities
@@ -184,7 +185,7 @@ export function CeoDashboard() {
     <>
       <PageHeader title="Executive overview" description={`${greeting()}, ${firstName(user.name)}. Company performance, pipeline, projects and the decisions waiting for you.`} meta={<Badge tone="brand">CEO / MD</Badge>} actions={<ButtonLink to="/approvals" icon={<ClipboardCheck className="size-4" />}>Final approvals</ButtonLink>} />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Revenue (fiscal YTD)" value={formatMoneyCompact(gmYtd.revenue)} trend={revTrend} hint="vs same period last year" icon={<TrendingUp className="size-5" />} to="/finance" />
+        <StatCard label="Revenue (fiscal YTD)" value={formatMoneyCompact(gmYtd.revenue)} trend={revTrend} hint={revTrend === undefined ? `${formatMoneyCompact(sumMinor(state.invoices.filter((i) => i.status === "Paid" && (i.paidDate ?? "") >= fy).map(invoiceTotal)))} collected` : "vs same period last year"} icon={<TrendingUp className="size-5" />} to="/finance" />
         <StatCard label="Gross margin (YTD)" value={`${gmYtd.marginPct.toFixed(1)}%`} hint={`${formatMoneyCompact(gmYtd.grossProfit)} gross profit`} icon={<Gauge className="size-5" />} tone="emerald" to="/finance?tab=revenue" />
         <StatCard label="Cash position (est.)" value={formatMoneyCompact(last.closing)} hint={`${last.net >= 0 ? '+' : ''}${formatMoneyCompact(last.net)} this month`} icon={<Wallet className="size-5" />} tone="purple" to="/finance?tab=cashflow" />
         <StatCard label="Sales pipeline" value={formatMoneyCompact(pipelineValue(opps))} hint={`${formatMoneyCompact(weightedPipeline(opps))} weighted · ${Math.round(wl.winRate * 100)}% win rate`} icon={<Target className="size-5" />} tone="amber" to="/sales" />

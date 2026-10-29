@@ -51,6 +51,8 @@ function Breadcrumbs() {
       else if (prev === 'items') label = state.inventory.find((x) => x.id === seg)?.code
       else if (prev === 'requests') label = state.purchaseRequests.find((x) => x.id === seg)?.code
       else if (prev === 'invoices') label = state.invoices.find((x) => x.id === seg)?.number
+      else if (prev === 'projects') label = state.projects.find((x) => x.id === seg)?.code
+      else if (prev === 'proposals') label = seg === 'new' ? 'New' : state.proposals.find((x) => x.id === seg)?.code
       label = label && label !== '—' ? label : 'Not found'
     }
     crumbs.push({ label: label ?? seg, to: isLast ? undefined : (known?.to ?? path) })

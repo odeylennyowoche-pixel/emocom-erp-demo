@@ -52,7 +52,7 @@ function ProposalView({ proposal: p }: { proposal: Proposal }) {
     Draft: [{ to: 'In review', label: 'Send for internal review', variant: 'primary' }],
     'In review': [
       { to: 'Draft', label: 'Back to draft', variant: 'secondary' },
-      { to: 'Submitted', label: 'Mark submitted to client', variant: 'primary' },
+      ...(perms.role === 'Manager' || perms.sales === 'manage' ? [{ to: 'Submitted' as ProposalStatus, label: 'Approve & mark submitted', variant: 'primary' as const }] : []),
     ],
     Submitted: [
       { to: 'Declined', label: 'Client declined', variant: 'secondary' },
@@ -157,6 +157,7 @@ function ProposalView({ proposal: p }: { proposal: Proposal }) {
               })}
             </ol>
             {editable && (p.status === 'Draft' || p.status === 'In review') && <p className="mt-3 text-xs text-slate-500">Tick each milestone as it is completed.</p>}
+            {p.status === 'In review' && !(perms.role === 'Manager' || perms.sales === 'manage') && <p className="mt-2 rounded-md bg-amber-50 px-2 py-1.5 text-xs text-amber-800">Waiting for your manager’s internal review before it goes to the client.</p>}
           </CardBody>
         </Card>
       </div>
