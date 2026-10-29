@@ -13,6 +13,6 @@ export const APP_CONFIG = {
   minorUnitsPerMajor: 100,
   locale: 'en-NG',
   /** Bump when the shape of stored demo data changes; old data is re-seeded. */
-  storageVersion: 2,
+  storageVersion: 3,
   storageKey: 'emocom-erp.demo-state',
 } as const

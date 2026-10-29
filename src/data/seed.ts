@@ -444,8 +444,8 @@ export function createSeedState(today = todayISO()): DemoState {
   for (let m = 13; m >= 0; m--) {
     const monthStart = monthKey(addMonths(today, -m)) + '-01'
     const maxDay = m === 0 ? Number(today.slice(8, 10)) : 28
-    // monthly billing target grows gently (~₦95m → ₦125m) with some noise
-    const targetMajor = (95_000_000 + (13 - m) * 2_300_000) * (0.92 + rng.next() * 0.16) * (m === 0 ? maxDay / 30 : 1)
+    // monthly billing target grows gently (~₦118m → ₦152m) with some noise
+    const targetMajor = (118_000_000 + (13 - m) * 2_600_000) * (0.93 + rng.next() * 0.14) * (m === 0 ? maxDay / 30 : 1)
     const count = m === 0 ? Math.max(3, Math.round((maxDay / 30) * 10)) : rng.int(9, 12)
     const weights = Array.from({ length: count }, () => 0.6 + rng.next())
     const weightSum = weights.reduce((a, b) => a + b, 0)
