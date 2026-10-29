@@ -60,13 +60,13 @@ async function signOut() {
 
 // unauthenticated users are sent to the login page
 await page.goto(BASE + '#/finance')
-if (!(await page.getByRole('heading', { name: 'Sign in' }).isVisible())) fail('Signed-out visitor was not redirected to the login page')
+await page.getByRole('heading', { name: 'Sign in' }).waitFor({ timeout: 15000 }).catch(() => fail('Signed-out visitor was not redirected to the login page'))
 
 // wrong password is rejected
 await page.getByLabel('Username').fill('ceo')
 await page.getByLabel('Password', { exact: true }).fill('wrong')
 await page.getByRole('button', { name: 'Sign in' }).click()
-if (!(await page.getByRole('alert').isVisible())) fail('Wrong password was not rejected')
+await page.getByText('Incorrect username or password.').waitFor({ timeout: 10000 }).catch(() => fail('Wrong password was not rejected'))
 
 for (const [username, exp] of Object.entries(EXPECT)) {
   errors.length = 0
